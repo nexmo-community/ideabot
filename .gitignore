@@ -1,0 +1,4 @@
+private.key
+.env
+IdeasBot-*.json
+node_modules/ 

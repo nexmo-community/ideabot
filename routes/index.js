@@ -12,25 +12,34 @@ const routes = {
 
     const dialogflowResponse = await dialogflowHandler(message);
 
-    if (
-      dialogflowResponse.allRequiredParamsPresent &&
-      dialogflowResponse.action == "idea.new"
-    ) {
-      const uri = process.env.MONGO_URI;
-      const client = new MongoClient(uri, { useNewUrlParser: true });
-      client.connect(function(err, client) {
-        const db = client.db("ideabot");
+    if (dialogflowResponse.allRequiredParamsPresent) {
+      switch (dialogflowResponse.action) {
+        case "idea.new":
+          const uri = process.env.MONGO_URI;
+          const client = new MongoClient(uri, { useNewUrlParser: true });
+          client.connect(function(err, client) {
+            const db = client.db("ideabot");
 
-        // Insert idea into document
-        db.collection("ideas").insertOne(
-          dialogflowResponse.parameters,
-          function(err, r) {
-            console.log("err: ", err);
-          }
-        );
-      });
+            // Insert idea into document
+            db.collection("ideas").insertOne(
+              dialogflowResponse.parameters.fields,
+              function(err, r) {
+                console.log("err: ", err);
+              }
+            );
+          });
+          messageResponder(from, dialogflowResponse.fulfillmentText);
+          break;
+        case "idea.search":
+          console.log("SEARCHING IN MONGO", dialogflowResponse.parameters);
+          break;
+        default:
+          console.log("I don't understand that.");
+      }
+    } else {
+      messageResponder(from, dialogflowResponse.fulfillmentText);
     }
-    messageResponder(from, dialogflowResponse.fulfillmentText);
+
     ctx.status = 200;
   }
 };

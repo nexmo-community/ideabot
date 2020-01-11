@@ -31,17 +31,6 @@ const dialogflowHandler = async query => {
   const result = await sessionClient
     .detectIntent(request)
     .catch(err => console.error("ERROR:", err));
-
-  // Pick out the response text from the returned array of objects
-  // const reply = await result[0].queryResult.fulfillmentText;
-  console.log("result", result);
-  console.log(
-    "allRequiredParamsPresent",
-    result[0].queryResult.allRequiredParamsPresent
-  );
-  console.log("parameters", result[0].queryResult.parameters);
-  console.log("intent", result[0].queryResult.intent);
-
   // Return the reply
   return result[0].queryResult;
 };

@@ -11,12 +11,12 @@ const routes = {
     console.log(from, message);
 
     const dialogflowResponse = await dialogflowHandler(message);
+    const uri = process.env.MONGO_URI;
+    const client = new MongoClient(uri, { useNewUrlParser: true });
 
     if (dialogflowResponse.allRequiredParamsPresent) {
       switch (dialogflowResponse.action) {
         case "idea.new":
-          const uri = process.env.MONGO_URI;
-          const client = new MongoClient(uri, { useNewUrlParser: true });
           client.connect(function(err, client) {
             const db = client.db("ideabot");
 
@@ -32,6 +32,39 @@ const routes = {
           break;
         case "idea.search":
           console.log("SEARCHING IN MONGO", dialogflowResponse.parameters);
+          (async function() {
+            try {
+              await client.connect();
+              const db = client.db("ideabot");
+
+              // Get the collection
+              const col = db.collection("ideas");
+
+              // Get the cursor
+              // .find not working:
+              const cursor = col.find({
+                "category.stringValue": {
+                  $regex:
+                    ".*" +
+                    dialogflowResponse.parameters.fields.searchString
+                      .stringValue +
+                    ".*",
+                  $options: "$i"
+                }
+              });
+
+              // Iterate over the cursor
+              while (await cursor.hasNext()) {
+                const doc = await cursor.next();
+                console.log("doc: ", doc);
+              }
+            } catch (err) {
+              console.log(err.stack);
+            }
+
+            // Close connection
+            client.close();
+          })();
           break;
         default:
           console.log("I don't understand that.");

@@ -31,37 +31,64 @@ const routes = {
           messageResponder(from, dialogflowResponse.fulfillmentText);
           break;
         case "idea.search":
-          console.log("SEARCHING IN MONGO", dialogflowResponse.parameters);
           (async function() {
             try {
               await client.connect();
               const db = client.db("ideabot");
 
               // Get the collection
-              const col = db.collection("ideas");
+              const coll = db.collection("ideas");
 
-              // Get the cursor
-              // .find not working:
-              const cursor = col.find({
-                "category.stringValue": {
-                  $regex:
-                    ".*" +
-                    dialogflowResponse.parameters.fields.searchString
-                      .stringValue +
-                    ".*",
-                  $options: "$i"
+              const agg = [
+                {
+                  $searchBeta: {
+                    search: {
+                      query:
+                        dialogflowResponse.parameters.fields.searchString
+                          .stringValue,
+                      path: [
+                        "description.stringValue",
+                        "title.stringValue",
+                        "category.stringValue"
+                      ]
+                    }
+                  }
+                },
+                {
+                  $sort: {
+                    title: 1
+                  }
+                },
+                {
+                  $project: {
+                    title: "$title.stringValue",
+                    description: "$description.stringValue",
+                    category: "$category.stringValue"
+                  }
                 }
+              ];
+
+              coll.aggregate(agg, (cmdErr, result) => {
+                result.toArray(function(err, documents) {
+                  if (documents.length > 0) {
+                    console.log("in statement");
+                    var reply = `I've found ${documents.length} ideas! Here are your ideas: `;
+                    for (let [index, val] of documents.entries()) {
+                      reply =
+                        reply +
+                        `\n ${index + 1}. ${val.title} \n ${
+                          val.description
+                        } \n ${val.category} \n ------`;
+                    }
+                  } else {
+                    var reply = "No ideas found.";
+                  }
+                  messageResponder(from, reply);
+                });
               });
-
-              // Iterate over the cursor
-              while (await cursor.hasNext()) {
-                const doc = await cursor.next();
-                console.log("doc: ", doc);
-              }
             } catch (err) {
-              console.log(err.stack);
+              console.log(err);
             }
-
             // Close connection
             client.close();
           })();

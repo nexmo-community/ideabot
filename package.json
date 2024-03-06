@@ -21,7 +21,7 @@
     "dialogflow": "^1.1.0",
     "koa": "^2.11.0",
     "koa-bodyparser": "^4.2.1",
-    "koa-route": "^3.2.0",
+    "koa-route": "^4.0.0",
     "mongodb": "^3.4.1",
     "nexmo": "^2.6.0-beta-1",
     "uuid": "^3.3.3"
